@@ -1,0 +1,19 @@
+{
+  "name": "kaoshiya",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": ["packages/*", "apps/*"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build:shared": "npm run build -w @kaoshiya/shared",
+    "build:server": "npm run build -w @kaoshiya/server",
+    "build:web": "npm run build -w @kaoshiya/web",
+    "build": "npm run build:shared && npm run build:server && npm run build:web",
+    "dev:server": "npm run dev -w @kaoshiya/server",
+    "dev:web": "npm run dev -w @kaoshiya/web",
+    "typecheck": "npm run typecheck -w @kaoshiya/shared && npm run typecheck -w @kaoshiya/server && npm run typecheck -w @kaoshiya/web",
+    "test": "npm run test -w @kaoshiya/server && npm run test -w @kaoshiya/web",
+    "start": "node apps/server/dist/index.js"
+  }
+}

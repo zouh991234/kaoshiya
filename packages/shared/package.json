@@ -1,0 +1,28 @@
+{
+  "name": "@kaoshiya/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./parsers": { "types": "./dist/parsers/index.d.ts", "import": "./dist/parsers/index.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "mammoth": "^1.9.0",
+    "papaparse": "^5.4.1",
+    "pdfjs-dist": "^4.9.155",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.3.15",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

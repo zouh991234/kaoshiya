@@ -1,0 +1,260 @@
+/* 字体：Maple Mono（SIL OFL 1.1），仅加载实际使用的 400 / 700 两个字重。
+   中文走系统字体栈；字体加载期间先用可读文本回退显示。 */
+@font-face {
+  font-family: 'Maple Mono';
+  src: url('/fonts/MapleMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Maple Mono';
+  src: url('/fonts/MapleMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-mono: 'Maple Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC',
+    sans-serif;
+
+  --fs-body: 15px;
+  --fs-title: 22px;
+  --fs-stem: 19px;
+  --fs-toolbar: 13px;
+  --fs-small: 12.5px;
+  --lh-body: 1.7;
+
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 6%);
+  --shadow-md: 0 4px 16px rgb(0 0 0 / 8%);
+  --shadow-lg: 0 12px 40px rgb(0 0 0 / 14%);
+
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --layout-max: 1360px;
+  --tap: 36px;
+}
+
+/* ── 常规主题 · 浅色（默认）───────────────────────────── */
+:root,
+[data-style='standard'][data-mode='light'] {
+  --bg: #faf8f3;
+  --bg-elev: #ffffff;
+  --bg-subtle: #f3eee3;
+  --bg-hover: #f6f1e6;
+  --bg-active: #efe8d8;
+
+  --text: #232220;
+  --text-muted: #5f5b53;
+  --text-faint: #8b857a;
+
+  --border: #e6e0d3;
+  --border-strong: #d2caba;
+
+  --accent: #f2c200;
+  --accent-soft: #fdf2c7;
+  --accent-text: #4a3a00;
+
+  --primary: #f2c200;
+  --primary-text: #23210f;
+  --primary-hover: #e0b400;
+  --primary-soft: #fdf2c7;
+
+  --focus: #b58a00;
+  --focus-ring: 0 0 0 3px rgb(242 194 0 / 35%);
+
+  --ok: #2c7a4b;
+  --ok-bg: #e9f5ee;
+  --ok-border: #b8dcc6;
+  --err: #bf3a2b;
+  --err-bg: #fdece9;
+  --err-border: #f0c2bb;
+  --warn: #9a6a10;
+  --warn-bg: #fdf5e0;
+  --warn-border: #ecd9a6;
+
+  --chart-1: #f2c200;
+  --chart-2: #6b7d8f;
+  --chart-3: #2c7a4b;
+  --chart-4: #b0603a;
+  --chart-5: #8b857a;
+
+  --shadow-card: var(--shadow-sm);
+  --code-bg: #f4efe4;
+}
+
+/* ── 常规主题 · 深色 ─────────────────────────────────── */
+[data-style='standard'][data-mode='dark'] {
+  --bg: #1a1917;
+  --bg-elev: #232220;
+  --bg-subtle: #262420;
+  --bg-hover: #2a2724;
+  --bg-active: #322e28;
+
+  --text: #ece8e1;
+  --text-muted: #b3ada2;
+  --text-faint: #857f74;
+
+  --border: #35322c;
+  --border-strong: #484339;
+
+  --accent: #f2c200;
+  --accent-soft: #3a3316;
+  --accent-text: #f6d95e;
+
+  --primary: #f2c200;
+  --primary-text: #1a1917;
+  --primary-hover: #ffd72e;
+  --primary-soft: #3a3316;
+
+  --focus: #f2c200;
+  --focus-ring: 0 0 0 3px rgb(242 194 0 / 28%);
+
+  --ok: #74c48f;
+  --ok-bg: #1d2a22;
+  --ok-border: #2f4a3a;
+  --err: #f09085;
+  --err-bg: #2e1f1d;
+  --err-border: #4d2f2b;
+  --warn: #e0b45c;
+  --warn-bg: #2b2517;
+  --warn-border: #453a20;
+
+  --chart-1: #f2c200;
+  --chart-2: #8fa4b8;
+  --chart-3: #74c48f;
+  --chart-4: #d08a63;
+  --chart-5: #857f74;
+
+  --shadow-card: none;
+  --code-bg: #262420;
+}
+
+/* ── 低调主题 · 浅色 ─────────────────────────────────── */
+[data-style='discreet'][data-mode='light'] {
+  --bg: #ffffff;
+  --bg-elev: #fbfbfb;
+  --bg-subtle: #f3f3f3;
+  --bg-hover: #f5f5f5;
+  --bg-active: #ececec;
+
+  --text: #1c1c1c;
+  --text-muted: #565656;
+  --text-faint: #8a8a8a;
+
+  --border: #e2e2e2;
+  --border-strong: #c8c8c8;
+
+  --accent: #4a4a4a;
+  --accent-soft: #ececec;
+  --accent-text: #1c1c1c;
+
+  --primary: #2f2f2f;
+  --primary-text: #ffffff;
+  --primary-hover: #1c1c1c;
+  --primary-soft: #ececec;
+
+  --focus: #2f2f2f;
+  --focus-ring: 0 0 0 3px rgb(0 0 0 / 18%);
+
+  --ok: #2f2f2f;
+  --ok-bg: #f4f4f4;
+  --ok-border: #d6d6d6;
+  --err: #141414;
+  --err-bg: #ececec;
+  --err-border: #c4c4c4;
+  --warn: #3d3d3d;
+  --warn-bg: #f1f1f1;
+  --warn-border: #d2d2d2;
+
+  --chart-1: #2f2f2f;
+  --chart-2: #6b6b6b;
+  --chart-3: #9a9a9a;
+  --chart-4: #bdbdbd;
+  --chart-5: #dadada;
+
+  --shadow-card: none;
+  --code-bg: #f3f3f3;
+
+  --radius: 5px;
+  --radius-sm: 4px;
+  --radius-lg: 6px;
+
+  --fs-body: 14.5px;
+  --fs-title: 21px;
+  --fs-stem: 18px;
+  --fs-toolbar: 12.5px;
+  --lh-body: 1.62;
+}
+
+/* ── 低调主题 · 深色 ─────────────────────────────────── */
+[data-style='discreet'][data-mode='dark'] {
+  --bg: #1b1b1b;
+  --bg-elev: #222222;
+  --bg-subtle: #272727;
+  --bg-hover: #2c2c2c;
+  --bg-active: #333333;
+
+  --text: #e8e8e8;
+  --text-muted: #a6a6a6;
+  --text-faint: #7c7c7c;
+
+  --border: #343434;
+  --border-strong: #474747;
+
+  --accent: #bdbdbd;
+  --accent-soft: #2e2e2e;
+  --accent-text: #e8e8e8;
+
+  --primary: #e2e2e2;
+  --primary-text: #1b1b1b;
+  --primary-hover: #f2f2f2;
+  --primary-soft: #2e2e2e;
+
+  --focus: #e2e2e2;
+  --focus-ring: 0 0 0 3px rgb(255 255 255 / 22%);
+
+  --ok: #dcdcdc;
+  --ok-bg: #262626;
+  --ok-border: #3c3c3c;
+  --err: #f0f0f0;
+  --err-bg: #2a2a2a;
+  --err-border: #444444;
+  --warn: #cccccc;
+  --warn-bg: #292929;
+  --warn-border: #414141;
+
+  --chart-1: #e2e2e2;
+  --chart-2: #b0b0b0;
+  --chart-3: #8a8a8a;
+  --chart-4: #6a6a6a;
+  --chart-5: #4c4c4c;
+
+  --shadow-card: none;
+  --code-bg: #272727;
+
+  --radius: 5px;
+  --radius-sm: 4px;
+  --radius-lg: 6px;
+
+  --fs-body: 14.5px;
+  --fs-title: 21px;
+  --fs-stem: 18px;
+  --fs-toolbar: 12.5px;
+  --lh-body: 1.62;
+}
