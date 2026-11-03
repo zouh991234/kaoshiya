@@ -25,7 +25,11 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       me.value = await api.me()
     } catch (err) {
-      if (!(err instanceof HttpError) || err.status !== 401) throw err
+      // 401 表示未登录；限流（429）或网络抖动时也保持「未登录态」继续渲染，
+      // 避免首屏变成空白页，用户刷新即可重试。
+      if (err instanceof HttpError && err.status !== 401) {
+        console.warn('加载当前账号失败：', err.message)
+      }
       me.value = null
     } finally {
       loading.value = false

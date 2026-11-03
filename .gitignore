@@ -6,3 +6,4 @@ data/
 .DS_Store
 apps/web/public/fonts/*.woff2.tmp
 .localtest/
+.ui-check/
