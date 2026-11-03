@@ -287,7 +287,7 @@ export function listExamRecords(
   return { items: rows.map(toSummary), total: total.c }
 }
 
-export function getExamRecord(db: Db, actor: Actor, examId: string): ExamRecordDetail {
+export function getExamRecord(db: Db, actor: Actor, examId: string): ExamRecordDetail & { questions: Question[] } {
   const row = db
     .prepare(
       `SELECT e.*, b.name AS bank_name, u.display_name AS user_name

@@ -4,18 +4,10 @@
  */
 
 import type { ExtractWarning, ExtractedDoc, FileKind } from './types.js'
-import { extractDocx } from './docx.js'
-import { extractPdf } from './pdf.js'
-import { extractTable } from './xlsx.js'
-import { extractPlainText } from './text.js'
-import { extractJson } from './json.js'
 
 export * from './types.js'
-export { extractDocx } from './docx.js'
-export { extractPdf } from './pdf.js'
-export { extractTable, autoMapColumns } from './xlsx.js'
-export { extractPlainText, decodeTextBuffer } from './text.js'
-export { extractJson } from './json.js'
+export { autoMapColumns } from './xlsx.js'
+export { decodeTextBuffer } from './text.js'
 
 export function detectFileKind(fileName: string, mime?: string): FileKind {
   const lower = fileName.toLowerCase()
@@ -52,18 +44,28 @@ export async function extractFile(file: File): Promise<ExtractedDoc> {
   const warnings: ExtractWarning[] = []
   try {
     switch (kind) {
-      case 'docx':
+      case 'docx': {
+        const { extractDocx } = await import('./docx.js')
         return await extractDocx(file, warnings)
-      case 'pdf':
+      }
+      case 'pdf': {
+        const { extractPdf } = await import('./pdf.js')
         return await extractPdf(file, warnings)
+      }
       case 'xlsx':
-      case 'csv':
+      case 'csv': {
+        const { extractTable } = await import('./xlsx.js')
         return await extractTable(file, kind, warnings)
+      }
       case 'md':
-      case 'txt':
+      case 'txt': {
+        const { extractPlainText } = await import('./text.js')
         return await extractPlainText(file, kind, warnings)
-      case 'json':
+      }
+      case 'json': {
+        const { extractJson } = await import('./json.js')
         return await extractJson(file, warnings)
+      }
       case 'doc-legacy':
         throw new ExtractError(file.name, '识别格式', '旧版 .doc 不支持，请另存为 .docx 后重试')
       default:

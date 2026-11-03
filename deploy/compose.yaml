@@ -1,0 +1,43 @@
+# 考试鸭部署编排：公网 IP + 端口直连访问
+# 使用前：cp .env.example .env && 修改 PUBLIC_ORIGIN / APP_PORT
+services:
+  kaoshiya:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: kaoshiya:1.0.0
+    container_name: kaoshiya
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 1.0
+    ports:
+      # 左侧为宿主端口（需在云安全组与防火墙放行），右侧固定为容器内 3300
+      - "${APP_PORT:-20260}:3300"
+    volumes:
+      - ./data:/app/data
+    environment:
+      NODE_ENV: production
+      PORT: "3300"
+      HOST: 0.0.0.0
+      DATA_DIR: /app/data
+      DATABASE_PATH: /app/data/kaoshiya.db
+      MEDIA_DIR: /app/data/media
+      BACKUP_DIR: /app/data/backups
+      # 必须与浏览器实际访问的地址完全一致（含协议与端口），否则登录与 CSRF 校验会失败
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?请在 .env 中设置 PUBLIC_ORIGIN，例如 http://1.2.3.4:20260}
+      LOG_LEVEL: info
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3300/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

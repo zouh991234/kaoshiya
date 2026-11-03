@@ -10,7 +10,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "seed:demo": "node dist/seed-demo.js"
+    "seed:demo": "node dist/seed-demo.js",
+    "backup": "node dist/backup-cli.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
