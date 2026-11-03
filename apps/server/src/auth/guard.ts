@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { SESSION_COOKIE } from '@kaoshiya/shared'
 import type { Perm } from '@kaoshiya/shared'
-import { forbidden, unauthorized } from '../errors.js'
+import { ApiError, forbidden, unauthorized } from '../errors.js'
 import { readSession } from './session.js'
 
 interface UserRow {
@@ -46,10 +46,26 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   }
 }
 
+/** 首次登录强制改密期间，只放行账号相关接口。 */
+function assertPasswordReady(request: FastifyRequest): void {
+  const auth = request.auth
+  if (!auth?.mustChangePwd) return
+  const path = request.url.split('?')[0] ?? ''
+  const allowed =
+    path.startsWith('/api/me') ||
+    path.startsWith('/api/auth/') ||
+    path.startsWith('/api/setup') ||
+    path === '/api/health'
+  if (!allowed) {
+    throw new ApiError(403, 'PASSWORD_CHANGE_REQUIRED', '请先修改初始密码后再使用其他功能')
+  }
+}
+
 /** 必须登录。 */
 export async function requireLogin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   await authenticate(request, reply)
   if (!request.auth) throw unauthorized()
+  assertPasswordReady(request)
 }
 
 /** 逐接口权限校验：权限点来自共享常量，不接受字符串字面量。 */
@@ -58,14 +74,8 @@ export function requirePerm(perm: Perm) {
     await authenticate(request, reply)
     const auth = request.auth
     if (!auth) throw unauthorized()
+    assertPasswordReady(request)
     if (!auth.perms.includes(perm)) throw forbidden(`缺少权限：${perm}`)
   }
 }
 
-/** 需要改密但尚未改密的用户只允许访问账号相关接口。 */
-export function requirePasswordReady(request: FastifyRequest): void {
-  const auth = request.auth
-  if (auth && auth.mustChangePwd) {
-    throw forbidden('请先修改初始密码')
-  }
-}
