@@ -148,7 +148,8 @@ export function detectQuestionType(input: DetectInput): QuestionType {
   if (answer.length === 0) return 'blank'
   if (answer.length === 1 && isJudgeToken(answer[0] ?? '')) return 'judge'
   const longest = Math.max(...answer.map((a) => a.length), 0)
-  if (answer.length === 1 && longest > 24) return 'essay'
+  const essayStem = /简答|论述|试述|详述|请说明|请简述|问答题|计算题/.test(input.stem)
+  if (answer.length === 1 && (longest > 24 || essayStem)) return 'essay'
   return 'blank'
 }
 

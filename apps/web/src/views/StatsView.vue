@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { Flame, Target, TrendingUp } from 'lucide-vue-next'
 import type { StatsAll, StatsSelf } from '@kaoshiya/shared'
+import { PERMS } from '@kaoshiya/shared'
 import AppShell from '@/components/AppShell.vue'
 import BarChart from '@/components/BarChart.vue'
 import RowBar from '@/components/RowBar.vue'
@@ -15,7 +16,7 @@ const self = ref<StatsSelf | null>(null)
 const all = ref<StatsAll | null>(null)
 const loading = ref(true)
 const error = ref('')
-const canAll = computed(() => can('stats:all'))
+const canAll = computed(() => can(PERMS.STATS_ALL))
 
 function fmtBytes(bytes: number): string {
   if (!bytes) return '0 B'

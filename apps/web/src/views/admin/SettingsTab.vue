@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { Save } from 'lucide-vue-next'
 import type { PublicSettings } from '@kaoshiya/shared'
+import { PERMS } from '@kaoshiya/shared'
 import { api, HttpError } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
 import { useCan } from '@/composables/useCan'
@@ -13,7 +14,7 @@ const form = reactive<PublicSettings>({ siteName: '考试鸭', defaultPassScore:
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
-const canWrite = can('settings:write')
+const canWrite = can(PERMS.SETTINGS_WRITE)
 
 async function load(): Promise<void> {
   loading.value = true

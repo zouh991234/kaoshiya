@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBootStore } from '@/stores/boot'
+import { PERMS } from '@kaoshiya/shared'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -20,33 +21,33 @@ const routes: RouteRecordRaw[] = [
     path: '/banks/:id',
     name: 'bank',
     component: () => import('@/views/BankView.vue'),
-    meta: { title: '题库详情', perms: ['bank:read'] },
+    meta: { title: '题库详情', perms: [PERMS.BANK_READ] },
   },
   {
     path: '/banks/:id/practice',
     name: 'practice',
     component: () => import('@/views/PracticeView.vue'),
-    meta: { title: '刷题', perms: ['question:read', 'stats:self'] },
+    meta: { title: '刷题', perms: [PERMS.QUESTION_READ, PERMS.STATS_SELF] },
   },
   {
     path: '/banks/:id/exam',
     name: 'exam',
     component: () => import('@/views/ExamView.vue'),
-    meta: { title: '模拟考试', perms: ['exam:take'] },
+    meta: { title: '模拟考试', perms: [PERMS.EXAM_TAKE] },
   },
   {
     path: '/exams/:id/result',
     name: 'exam-result',
     component: () => import('@/views/ExamResultView.vue'),
-    meta: { title: '考试结果', perms: ['exam:take'] },
+    meta: { title: '考试结果', perms: [PERMS.EXAM_TAKE] },
   },
   {
     path: '/banks/:id/import',
     name: 'import',
     component: () => import('@/views/import/ImportView.vue'),
-    meta: { title: '导入题库', perms: ['question:import', 'bank:create'] },
+    meta: { title: '导入题库', perms: [PERMS.QUESTION_IMPORT, PERMS.BANK_CREATE] },
   },
-  { path: '/stats', name: 'stats', component: () => import('@/views/StatsView.vue'), meta: { title: '统计', perms: ['stats:self'] } },
+  { path: '/stats', name: 'stats', component: () => import('@/views/StatsView.vue'), meta: { title: '统计', perms: [PERMS.STATS_SELF] } },
   {
     path: '/me',
     name: 'me',
@@ -62,16 +63,16 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/admin',
     component: () => import('@/views/admin/AdminView.vue'),
-    meta: { title: '管理后台', perms: ['user:read', 'role:read', 'settings:write', 'audit:read', 'data:backup', 'stats:all'] },
+    meta: { title: '管理后台', perms: [PERMS.USER_READ, PERMS.ROLE_READ, PERMS.SETTINGS_WRITE, PERMS.AUDIT_READ, PERMS.DATA_BACKUP, PERMS.STATS_ALL] },
     children: [
       { path: '', name: 'admin', redirect: { name: 'admin-overview' } },
-      { path: 'overview', name: 'admin-overview', component: () => import('@/views/admin/OverviewTab.vue'), meta: { title: '概览', perms: ['stats:all'] } },
-      { path: 'users', name: 'admin-users', component: () => import('@/views/admin/UsersTab.vue'), meta: { title: '用户管理', perms: ['user:read'] } },
-      { path: 'roles', name: 'admin-roles', component: () => import('@/views/admin/RolesTab.vue'), meta: { title: '角色管理', perms: ['role:read'] } },
-      { path: 'banks', name: 'admin-banks', component: () => import('@/views/admin/BanksTab.vue'), meta: { title: '题库管理', perms: ['bank:read'] } },
-      { path: 'settings', name: 'admin-settings', component: () => import('@/views/admin/SettingsTab.vue'), meta: { title: '系统设置', perms: ['settings:write'] } },
-      { path: 'backups', name: 'admin-backups', component: () => import('@/views/admin/BackupTab.vue'), meta: { title: '数据备份', perms: ['data:backup'] } },
-      { path: 'audit', name: 'admin-audit', component: () => import('@/views/admin/AuditTab.vue'), meta: { title: '审计日志', perms: ['audit:read'] } },
+      { path: 'overview', name: 'admin-overview', component: () => import('@/views/admin/OverviewTab.vue'), meta: { title: '概览', perms: [PERMS.STATS_ALL] } },
+      { path: 'users', name: 'admin-users', component: () => import('@/views/admin/UsersTab.vue'), meta: { title: '用户管理', perms: [PERMS.USER_READ] } },
+      { path: 'roles', name: 'admin-roles', component: () => import('@/views/admin/RolesTab.vue'), meta: { title: '角色管理', perms: [PERMS.ROLE_READ] } },
+      { path: 'banks', name: 'admin-banks', component: () => import('@/views/admin/BanksTab.vue'), meta: { title: '题库管理', perms: [PERMS.BANK_READ] } },
+      { path: 'settings', name: 'admin-settings', component: () => import('@/views/admin/SettingsTab.vue'), meta: { title: '系统设置', perms: [PERMS.SETTINGS_WRITE] } },
+      { path: 'backups', name: 'admin-backups', component: () => import('@/views/admin/BackupTab.vue'), meta: { title: '数据备份', perms: [PERMS.DATA_BACKUP] } },
+      { path: 'audit', name: 'admin-audit', component: () => import('@/views/admin/AuditTab.vue'), meta: { title: '审计日志', perms: [PERMS.AUDIT_READ] } },
     ],
   },
   { path: '/403', name: 'forbidden', component: () => import('@/views/ForbiddenView.vue'), meta: { title: '无权限' } },

@@ -6,6 +6,7 @@ import BrandMark from './BrandMark.vue'
 import ThemeMenu from './ThemeMenu.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCan } from '@/composables/useCan'
+import { PERMS } from '@kaoshiya/shared'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -18,8 +19,8 @@ const userRoot = ref<HTMLElement | null>(null)
 
 const siteName = computed(() => auth.me?.settings.siteName ?? '考试鸭')
 const displayName = computed(() => auth.me?.user.displayName ?? '')
-const showAdmin = computed(() => can('user:read') || can('role:read') || can('settings:write') || can('audit:read') || can('data:backup'))
-const showStats = computed(() => can('stats:self'))
+const showAdmin = computed(() => can(PERMS.USER_READ) || can(PERMS.ROLE_READ) || can(PERMS.SETTINGS_WRITE) || can(PERMS.AUDIT_READ) || can(PERMS.DATA_BACKUP))
+const showStats = computed(() => can(PERMS.STATS_SELF))
 
 const navItems = computed(() => {
   const items: { to: string; label: string; icon: typeof BookOpen }[] = [{ to: '/', label: '题库', icon: BookOpen }]

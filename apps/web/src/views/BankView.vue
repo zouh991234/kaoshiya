@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Clock, Play, Shuffle, SlidersHorizontal, Upload } from 'lucide-vue-next'
 import type { Bank, Chapter, ProgressRow, QuestionType } from '@kaoshiya/shared'
-import { QUESTION_TYPE_LABELS } from '@kaoshiya/shared'
+import { QUESTION_TYPE_LABELS, PERMS } from '@kaoshiya/shared'
 import AppShell from '@/components/AppShell.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { api, HttpError } from '@/api/client'
@@ -25,8 +25,8 @@ const loading = ref(true)
 const error = ref('')
 const chapterFilter = ref('')
 
-const canImport = computed(() => can('question:import') && can('bank:create'))
-const canExam = computed(() => can('exam:take'))
+const canImport = computed(() => can(PERMS.QUESTION_IMPORT) && can(PERMS.BANK_CREATE))
+const canExam = computed(() => can(PERMS.EXAM_TAKE))
 const typeEntries = computed(() =>
   (Object.keys(byType.value) as QuestionType[])
     .filter((type) => byType.value[type] > 0)

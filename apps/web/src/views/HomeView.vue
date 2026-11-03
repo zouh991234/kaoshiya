@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { FolderPlus, Search, Upload } from 'lucide-vue-next'
 import type { BankSummary } from '@kaoshiya/shared'
+import { PERMS } from '@kaoshiya/shared'
 import AppShell from '@/components/AppShell.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { api, HttpError } from '@/api/client'
@@ -25,7 +26,7 @@ const newBankSubject = ref('')
 const showCreate = ref(false)
 
 const isDiscreet = computed(() => theme.style === 'discreet')
-const canCreate = computed(() => can('bank:create'))
+const canCreate = computed(() => can(PERMS.BANK_CREATE))
 const filtered = computed(() => {
   const term = keyword.value.trim().toLowerCase()
   if (!term) return banks.value

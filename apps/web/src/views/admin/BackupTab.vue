@@ -6,6 +6,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import { api, HttpError } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
 import { useCan } from '@/composables/useCan'
+import { PERMS } from '@kaoshiya/shared'
 
 interface BackupItem {
   id: string
@@ -26,7 +27,7 @@ const confirmTarget = ref<BackupItem | null>(null)
 const confirmOpen = ref(false)
 const restoreTarget = ref<BackupItem | null>(null)
 const restoreOpen = ref(false)
-const canBackup = computed(() => can('data:backup'))
+const canBackup = computed(() => can(PERMS.DATA_BACKUP))
 
 function fmtBytes(bytes: number): string {
   if (!bytes) return '0 B'
