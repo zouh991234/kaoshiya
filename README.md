@@ -161,6 +161,34 @@ docker compose logs -f --tail=50
 
 ---
 
+## 用 JSON 批量导入（推荐给大量题目 / AI 整理）
+
+扫描版 PDF 没有文字层，无法直接解析。把题目交给 AI 整理成下面的 JSON（或转成 Word），
+在导入向导里选择 `.json` 文件即可跳过切题，直接进入校对入库：
+
+```json
+{
+  "questions": [
+    {
+      "chapter": "第一章 静电场",
+      "type": "single",
+      "stem": "题干文字",
+      "options": ["选项A", "选项B", "选项C", "选项D"],
+      "answer": "B",
+      "explanation": "解析文字",
+      "difficulty": 3
+    },
+    { "type": "multiple", "stem": "…", "options": ["…"], "answer": ["A", "C"], "explanation": "…" },
+    { "type": "judge", "stem": "…", "answer": "对", "explanation": "…" },
+    { "type": "essay", "stem": "…", "answer": "参考答案", "explanation": "…" }
+  ]
+}
+```
+
+字段说明：`type` 取 `single / multiple / judge / blank / essay`（可省略，自动识别）；
+`answer` 判断题写「对 / 错 / √ / ×」皆可（统一存为 T / F），多选传数组；
+`options` 也接受 `{"A": "…", "B": "…"}` 对象；`chapter` 缺省为未分章。
+
 ## 演示数据
 
 正式部署默认**不生成**任何演示账号或固定密码。需要体验完整链路时显式执行：
