@@ -225,6 +225,16 @@ cd deploy
 docker compose build && docker compose up -d
 ```
 
+> 若服务器直连 GitHub 超时（国内常见），可在本地打包后上传，服务器上解压覆盖即可：
+>
+> ```bash
+> # 本地
+> tar --exclude=node_modules --exclude=.git --exclude=dist --exclude=data -czf kaoshiya-src.tgz kaoshiya
+> scp -P <ssh端口> -i <私钥> kaoshiya-src.tgz root@<服务器>:/tmp/
+> # 服务器
+> cd /opt && tar -xzf /tmp/kaoshiya-src.tgz && cd /opt/kaoshiya/deploy && docker compose build && docker compose up -d
+> ```
+
 - 数据库迁移是增量 SQL（`apps/server/migrations/*.sql`），启动时自动执行，执行记录在 `schema_migrations`。
 - 回滚：`git checkout <上一个 tag/commit>` 后重新 `build` + `up -d`；
   若新版本已执行过迁移，请从升级前的备份恢复数据库（见上）再回滚镜像。
