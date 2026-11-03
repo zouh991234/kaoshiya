@@ -24,12 +24,22 @@ function openDb(): Promise<IDBDatabase> {
   })
 }
 
+/** Vue 响应式代理无法被结构化克隆，写入前先转成普通对象。 */
+function toPlain<T>(data: T): T {
+  try {
+    return JSON.parse(JSON.stringify(data)) as T
+  } catch {
+    return data
+  }
+}
+
 export async function saveDraft<T>(key: string, data: T): Promise<void> {
   if (typeof indexedDB === 'undefined') return
+  const plain = toPlain(data)
   const db = await openDb()
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite')
-    tx.objectStore(STORE).put({ key, updatedAt: new Date().toISOString(), data })
+    tx.objectStore(STORE).put({ key, updatedAt: new Date().toISOString(), data: plain })
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error ?? new Error('草稿保存失败'))
   })

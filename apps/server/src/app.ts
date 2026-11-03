@@ -135,7 +135,8 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   await app.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
-    allowList: [],
+    // 只对 /api 限流：一次页面加载会并发拉取十几个分块，静态资源计入会误伤正常用户
+    allowList: (request) => !request.url.startsWith('/api/'),
     keyGenerator: (request) => request.ip,
     errorResponseBuilder: () => ({ code: 'TOO_MANY_REQUESTS', message: '请求过于频繁，请稍后再试' }),
   })
@@ -160,6 +161,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
       decorateReply: false,
       setHeaders: (res, filePath) => {
         if (/\.(woff2|woff|ttf)$/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+        if (/[\/]assets[\/]/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
         if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache')
       },
     })
@@ -178,7 +180,12 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
       })
       return
     }
-    const statusCode = typeof error.statusCode === 'number' ? error.statusCode : 500
+    if (error.code === 'TOO_MANY_REQUESTS') {
+      reply.code(429).send({ code: 'TOO_MANY_REQUESTS', message: error.message || '请求过于频繁，请稍后再试' })
+      return
+    }
+    const statusCode =
+      typeof error.statusCode === 'number' ? error.statusCode : reply.statusCode >= 400 ? reply.statusCode : 500
     if (statusCode >= 500) {
       request.log.error({ err: error }, 'unhandled error')
       reply.code(500).send({ code: 'INTERNAL_ERROR', message: '服务器内部错误' })

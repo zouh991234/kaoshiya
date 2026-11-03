@@ -12,6 +12,7 @@ import { api, HttpError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useCan } from '@/composables/useCan'
 import { useToastStore } from '@/stores/toast'
+import { canUseClipboard } from '@/lib/id'
 
 type ModalMode = 'create' | 'edit' | 'roles' | 'password'
 interface RowAction {
@@ -252,6 +253,10 @@ async function resetPassword(user: UserSummary): Promise<void> {
 
 async function copyPassword(): Promise<void> {
   if (!passwordInfo.value) return
+  if (!canUseClipboard()) {
+    toast.info('当前为 HTTP 访问，浏览器不允许写入剪贴板，请手动选中密码复制')
+    return
+  }
   try {
     await navigator.clipboard.writeText(passwordInfo.value.value)
     toast.ok('密码已复制到剪贴板')

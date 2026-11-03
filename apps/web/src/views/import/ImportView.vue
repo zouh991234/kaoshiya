@@ -2,8 +2,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, FileText, Loader2, Upload } from 'lucide-vue-next'
-import type { ExtractedDoc } from '@kaoshiya/shared/parsers'
-import { extractFile } from '@kaoshiya/shared/parsers'
+import type { ColumnMap, ExtractedDoc, TableBlock } from '@kaoshiya/shared/parsers'
+import { autoMapColumns, emptyColumnMap, extractFile } from '@kaoshiya/shared/parsers'
 import type { QualityIssue, QuestionMedia, QuestionOption, QuestionType, SrcRef } from '@kaoshiya/shared'
 import {
   BUILTIN_TEMPLATES,
@@ -25,6 +25,7 @@ import Workbench from './Workbench.vue'
 import type { EditableQuestion, ImportDraft } from './types'
 import { api, HttpError } from '@/api/client'
 import { clearDraft, loadDraft, saveDraft } from '@/lib/draft'
+import { createId } from '@/lib/id'
 import { useToastStore } from '@/stores/toast'
 
 const route = useRoute()
@@ -55,6 +56,10 @@ const answersSeparated = ref(false)
 const answerSource = ref('')
 const ruleError = ref('')
 
+const tableIndex = ref(0)
+const mapping = reactive<ColumnMap>(emptyColumnMap())
+const mappingError = ref('')
+
 const questions = ref<EditableQuestion[]>([])
 const selectedIndex = ref(0)
 const history = ref<EditableQuestion[][]>([])
@@ -64,7 +69,7 @@ const submitting = ref(false)
 const submittedBatches = ref(0)
 const totalBatches = ref(0)
 const submitError = ref('')
-const importId = ref(crypto.randomUUID())
+const importId = ref(createId())
 
 const report = computed(() => {
   const items = questions.value.map((question) => ({
@@ -131,6 +136,97 @@ function saveAsTemplate(): void {
   templateNameOpen.value = false
   templateName.value = ''
   toast.ok(`已保存模板「${template.name}」`)
+}
+
+const currentTable = computed<TableBlock | null>(() => doc.value?.tables?.[tableIndex.value] ?? null)
+const hasTables = computed(() => (doc.value?.tables?.length ?? 0) > 0)
+const headerLabels = computed(() =>
+  (currentTable.value?.headers ?? []).map((head, index) => head || `第 ${index + 1} 列`),
+)
+
+const mappingFields = computed(() => [
+  { key: 'stem' as const, label: '题干', required: true },
+  { key: 'answer' as const, label: '答案', required: true },
+  { key: 'explanation' as const, label: '解析', required: false },
+  { key: 'chapter' as const, label: '章节', required: false },
+  { key: 'difficulty' as const, label: '难度', required: false },
+  { key: 'type' as const, label: '题型', required: false },
+])
+
+const optionKeys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+
+function detectMapping(): void {
+  const table = currentTable.value
+  if (!table) return
+  const auto = autoMapColumns(table.headers)
+  Object.assign(mapping, auto)
+  mappingError.value = ''
+}
+
+function normalizeType(raw: string, fallback: QuestionType): QuestionType {
+  const text = raw.trim()
+  if (!text) return fallback
+  const lowered = text.toLowerCase()
+  if (['single', 'multiple', 'judge', 'blank', 'essay'].includes(lowered)) return lowered as QuestionType
+  if (text.includes('单选')) return 'single'
+  if (text.includes('多选')) return 'multiple'
+  if (text.includes('判断')) return 'judge'
+  if (text.includes('填空')) return 'blank'
+  if (text.includes('主观') || text.includes('简答') || text.includes('问答')) return 'essay'
+  return fallback
+}
+
+/** 按列映射把表格行转成题目（xlsx / csv / docx 表格通用）。 */
+function generateFromTable(): void {
+  const table = currentTable.value
+  if (!table) return
+  if (mapping.stem < 0) {
+    mappingError.value = '请先指定「题干」所在的列'
+    return
+  }
+  const cell = (row: string[], index: number): string => (index >= 0 ? (row[index] ?? '').trim() : '')
+  const out: EditableQuestion[] = []
+  for (const row of table.rows) {
+    const stem = cell(row, mapping.stem)
+    if (!stem) continue
+    const options = Object.entries(mapping.options)
+      .filter(([, index]) => index >= 0)
+      .map(([key, index]) => ({ key, text: cell(row, index) }))
+      .filter((option) => option.text.length > 0)
+      .sort((a, b) => a.key.localeCompare(b.key))
+    const answerRaw = cell(row, mapping.answer)
+    const answer = answerRaw ? parseAnswer(answerRaw) : []
+    const explanation = cell(row, mapping.explanation)
+    const chapterName = cell(row, mapping.chapter)
+    const difficultyRaw = Number(cell(row, mapping.difficulty))
+    const type = normalizeType(cell(row, mapping.type), detectQuestionType({ stem, options, answer }))
+    const question: EditableQuestion = {
+      uid: uid(),
+      no: out.length + 1,
+      type,
+      stem: normalizeStem(stem),
+      options,
+      answer,
+      explanation,
+      difficulty: Number.isFinite(difficultyRaw) && difficultyRaw >= 1 ? Math.min(5, Math.round(difficultyRaw)) : 3,
+      tags: [],
+      chapterName,
+      media: [],
+      srcRef: { sheet: table.sheet, row: out.length + 2 } as SrcRef,
+      issues: [],
+    }
+    question.issues = questionIssues(question)
+    out.push(question)
+  }
+  if (out.length === 0) {
+    mappingError.value = '按当前列映射没有生成任何题目，请检查「题干」列是否正确'
+    return
+  }
+  mappingError.value = ''
+  questions.value = out
+  markDuplicates()
+  toast.ok(`按列映射生成 ${out.length} 题`)
+  step.value = 3
 }
 
 function uid(): string {
@@ -260,6 +356,7 @@ async function onPickFile(event: Event): Promise<void> {
       return
     }
     step.value = 1
+    detectMapping()
     resplit(true)
   } catch (err) {
     extractError.value = err instanceof Error ? err.message : '抽取失败'
@@ -519,6 +616,7 @@ onMounted(async () => {
     <!-- 2 抽取 -->
     <section v-else-if="step === 1" class="card panel">
       <h2 class="panel-title">抽取内容</h2>
+      <p v-if="extractError" class="field-error"><AlertTriangle :size="14" /> {{ extractError }}</p>
       <div v-if="doc" class="extract-meta">
         <span class="badge">{{ doc.fileName }}</span>
         <span class="badge">字符 {{ doc.stats.chars }}</span>
@@ -541,7 +639,63 @@ onMounted(async () => {
 
     <!-- 3 切题规则 -->
     <section v-else-if="step === 2" class="card panel">
-      <h2 class="panel-title">切题规则</h2>
+      <h2 class="panel-title">切题</h2>
+
+      <div v-if="hasTables" class="mapping">
+        <div class="mapping-head">
+          <div class="grow">
+            <h3 class="sub-title">表格来源：按列映射</h3>
+            <p class="small muted">识别到 {{ doc?.tables?.length ?? 0 }} 张表，可直接按列生成题目；也可继续用下方正则切题。</p>
+          </div>
+          <select
+            v-if="(doc?.tables?.length ?? 0) > 1"
+            v-model.number="tableIndex"
+            class="select"
+            aria-label="选择工作表"
+            @change="detectMapping"
+          >
+            <option v-for="(tbl, i) in doc?.tables ?? []" :key="i" :value="i">
+              {{ tbl.sheet || `工作表 ${i + 1}` }}（{{ tbl.rows.length }} 行）
+            </option>
+          </select>
+        </div>
+
+        <div class="map-grid">
+          <label v-for="field in mappingFields" :key="field.key" class="map-item">
+            <span class="field-label">{{ field.label }}<span v-if="field.required" class="req">*</span></span>
+            <select
+              class="select"
+              :value="mapping[field.key]"
+              @change="mapping[field.key] = Number(($event.target as HTMLSelectElement).value)"
+            >
+              <option :value="-1">（不使用）</option>
+              <option v-for="(label, i) in headerLabels" :key="i" :value="i">{{ label }}</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="map-grid">
+          <label v-for="key in optionKeys" :key="key" class="map-item">
+            <span class="field-label">选项 {{ key }}</span>
+            <select
+              class="select"
+              :value="mapping.options[key] ?? -1"
+              @change="mapping.options[key] = Number(($event.target as HTMLSelectElement).value)"
+            >
+              <option :value="-1">（不使用）</option>
+              <option v-for="(label, i) in headerLabels" :key="i" :value="i">{{ label }}</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <button class="btn btn-primary btn-sm" type="button" @click="generateFromTable">按列映射生成题目</button>
+          <span class="small faint">适用于表头明确的 Excel / CSV</span>
+        </div>
+        <p v-if="mappingError" class="field-error">{{ mappingError }}</p>
+        <hr class="divider" />
+        <h3 class="sub-title">文本来源：正则切题</h3>
+      </div>
       <div class="templates">
         <button
           v-for="template in templates"
@@ -686,6 +840,35 @@ onMounted(async () => {
 }
 .title {
   font-size: var(--fs-title);
+}
+.mapping {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mapping-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.sub-title {
+  font-size: var(--fs-toolbar);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.map-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.req {
+  color: var(--err);
+  margin-left: 2px;
 }
 .steps {
   display: flex;

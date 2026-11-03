@@ -1,5 +1,5 @@
 import * as pdfjs from 'pdfjs-dist'
-import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker&inline'
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
 import type { ExtractWarning, ExtractedDoc } from './types.js'
 import { finalizeDoc, looksScanned, makeDoc } from './types.js'
 import { stripHeadersFooters } from '../normalize.js'
@@ -36,6 +36,33 @@ export async function extractPdf(file: File, warnings: ExtractWarning[]): Promis
   const pdf = await loadingTask.promise
   const doc = makeDoc('pdf', file.name)
   try {
+    // 先探测前几页的文本密度：扫描件不必逐页跑完再判定（几百页会白等几分钟）
+    const probePages = Math.min(3, pdf.numPages)
+    let probeChars = 0
+    const probeTexts: string[] = []
+    for (let pageNo = 1; pageNo <= probePages; pageNo += 1) {
+      const page = await pdf.getPage(pageNo)
+      const content = await page.getTextContent()
+      const text = content.items
+        .map((raw) => ('str' in raw ? (raw.str as string) : ''))
+        .join('')
+        .replace(/\s/g, '')
+      probeChars += text.length
+      probeTexts.push(text)
+      page.cleanup()
+    }
+    if (pdf.numPages >= probePages && probeChars / probePages < 20) {
+      doc.scanned = true
+      doc.pageTexts = probeTexts
+      doc.text = ''
+      doc.stats.pages = pdf.numPages
+      warnings.push({
+        code: 'scanned-pdf',
+        message: `检测为扫描版 PDF（前 ${probePages} 页几乎没有文本层，共 ${pdf.numPages} 页）。这类文件没有文字层，请把它转成 Word（.docx）后导入，或整理成 JSON 后导入。`,
+      })
+      return finalizeDoc(doc)
+    }
+
     const pageTexts: string[] = []
     for (let pageNo = 1; pageNo <= pdf.numPages; pageNo += 1) {
       const page = await pdf.getPage(pageNo)
@@ -71,7 +98,7 @@ export async function extractPdf(file: File, warnings: ExtractWarning[]): Promis
     if (doc.scanned) {
       warnings.push({
         code: 'scanned-pdf',
-        message: '检测为扫描版 PDF（文本层几乎没有内容）。请先外部 OCR 后再上传，或使用手动录题。',
+        message: '检测为扫描版 PDF（文本层几乎没有内容）。这类文件没有文字层，请把它转成 Word（.docx）后导入，或整理成 JSON 后导入。',
       })
     }
     doc.text = stripHeadersFooters(pageTexts)

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { renderMarkdown } from './markdown'
-import { compressSpace, judgeAnswer, parseAnswer, parseAnswerSection, detectQuestionType } from '@kaoshiya/shared'
+import {
+  BUILTIN_TEMPLATES,
+  compressSpace,
+  detectQuestionType,
+  judgeAnswer,
+  parseAnswer,
+  parseAnswerSection,
+  splitAndParse,
+} from '@kaoshiya/shared'
 
 describe('受限 Markdown 渲染', () => {
   it('渲染段落、加粗与代码', () => {
@@ -87,5 +95,24 @@ describe('答案与题型归一化', () => {
 
   it('空白压缩不改变语义', () => {
     expect(compressSpace('  甲   乙  ')).toBe('甲 乙')
+  })
+})
+
+describe('切题模板', () => {
+  it('编号式不把 1.1 这类小节号当成题号', () => {
+    const template = BUILTIN_TEMPLATES.find((item) => item.id === 'numbered')
+    expect(template).toBeTruthy()
+    const blocks = splitAndParse('1.1 硬件组成\n1. 第一题\nA. 甲\nB. 乙\n答案：A', template!)
+    expect(blocks.length).toBe(1)
+    expect(blocks[0]?.stem).toContain('第一题')
+    expect(blocks[0]?.answer).toEqual(['A'])
+  })
+
+  it('可以解析多行选项与解析', () => {
+    const template = BUILTIN_TEMPLATES.find((item) => item.id === 'numbered')!
+    const blocks = splitAndParse('2. 第二题？\nA. 甲\nB. 乙\n答案：B\n解析：因为乙正确。', template)
+    expect(blocks.length).toBe(1)
+    expect(blocks[0]?.options.length).toBe(2)
+    expect(blocks[0]?.explanation).toContain('因为乙正确')
   })
 })
