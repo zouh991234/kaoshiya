@@ -72,8 +72,16 @@ export async function bankRoutes(app: FastifyInstance): Promise<void> {
     const byType = Object.fromEntries(QUESTION_TYPES.map((t) => [t, 0])) as Record<string, number>
     for (const row of typeRows) byType[row.type] = row.c
     const total = typeRows.reduce((sum, row) => sum + row.c, 0)
-    const progress = getProgressMap(app.db, request.auth!.userId)
-    const seen = Object.values(progress).filter((p) => p.seen > 0).length
+    const summaryRow = app.db
+      .prepare(
+        `SELECT
+           COALESCE(SUM(CASE WHEN p.seen > 0 THEN 1 ELSE 0 END), 0) AS seen,
+           COALESCE(SUM(CASE WHEN p.favorite = 1 THEN 1 ELSE 0 END), 0) AS favorite,
+           COALESCE(SUM(CASE WHEN p.mastery = 2 THEN 1 ELSE 0 END), 0) AS mastered
+         FROM questions q LEFT JOIN progress p ON p.question_id = q.id AND p.user_id = ?
+         WHERE q.bank_id = ?`,
+      )
+      .get(request.auth!.userId, params.id) as { seen: number; favorite: number; mastered: number }
     const chapterRows = app.db
       .prepare(
         `SELECT c.id AS id, COUNT(q.id) AS total,
@@ -90,11 +98,7 @@ export async function bankRoutes(app: FastifyInstance): Promise<void> {
       chapters,
       byType,
       total,
-      progressSummary: {
-        seen,
-        favorite: Object.values(progress).filter((p) => p.favorite).length,
-        mastered: Object.values(progress).filter((p) => p.mastery === 2).length,
-      },
+      progressSummary: summaryRow,
       chapterProgress,
     }
   })

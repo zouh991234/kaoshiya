@@ -82,8 +82,17 @@ npm test            # 服务端 vitest（登录 / 越权 403 / 导入主链路�
 
 ## 部署（公网 IP + 端口直连）
 
-目标机器：4 核 4 GB 云服务器，容器限制 `mem_limit: 384m`、`cpus: 1.0`，
-后端常驻 RSS 约 60–90 MB，空闲 CPU 接近 0。
+目标机器：4 核 4 GB 云服务器，容器限制 `mem_limit: 384m`、`cpus: 1.0`。
+
+本次实例的实际部署参数：
+
+| 项 | 值 |
+|---|---|
+| 访问地址 | `http://110.40.154.248:20260` |
+| 宿主端口 | `20260`（容器内 `0.0.0.0:3300`） |
+| `PUBLIC_ORIGIN` | `http://110.40.154.248:20260` |
+| 部署目录 | `/opt/kaoshiya`（数据卷 `deploy/data`） |
+| 端口范围约束 | 该机器安全组只开放 `20260–20300`，因此未使用文档默认的 3300 |
 
 ### 1. 准备
 
@@ -92,6 +101,11 @@ git clone <本仓库地址> kaoshiya
 cd kaoshiya/deploy
 cp .env.example .env
 vi .env          # 设置 PUBLIC_ORIGIN 与 APP_PORT
+
+# 关键：数据目录由容器内的非 root 用户（uid 10001）写入，
+# 必须先把宿主机目录属主改好，否则启动会报 SQLITE_CANTOPEN
+mkdir -p data/media data/backups
+sudo chown -R 10001:10001 data
 ```
 
 `.env` 示例：
@@ -113,6 +127,11 @@ docker compose logs -f --tail=50
 ```
 
 多阶段构建：前端 `vite build` → 后端 `tsc` → 运行镜像只装生产依赖，并以非 root 用户运行。
+
+> 国内网络环境：若 Docker Hub 不可达，可在 `/etc/docker/daemon.json` 配置
+> `"registry-mirrors": ["https://docker.m.daocloud.io"]`，并确认 Docker 守护进程没有配置
+> 指向失效代理的 `HTTP_PROXY`（`/etc/systemd/system/docker.service.d/`）。
+> 镜像构建阶段使用 npmmirror 安装依赖、并本地编译 better-sqlite3，无需访问 GitHub 下载预编译包。
 
 ### 3. 首次初始化
 
@@ -226,6 +245,25 @@ docker compose build && docker compose up -d
 | 导入页首次打开较慢 | pdfjs / xlsx / mammoth 是按需加载的独立分块，只在进入导入页并选择文件时下载 |
 
 ---
+
+## 实测记录（截至交付时）
+
+在 4 核 4 GB 的云服务器（与其它站点共用）上以 Docker 部署实测：
+
+```
+$ docker stats kaoshiya --no-stream
+NAME       MEM USAGE / LIMIT     CPU %
+kaoshiya   51.14MiB / 384MiB     0.00%      # 空闲
+kaoshiya   49.06MiB / 384MiB     0.01%      # 导入 5000 题期间
+```
+
+- 后端常驻 RSS 约 **49–51 MB**（要求 ≤ 120 MB），空闲 CPU ≈ 0。
+- 5000 题分 50 批导入：总耗时约 **4.5 s**（每批 100 题约 88–93 ms），期间容器内存无明显增长。
+- 公网访问 `http://<IP>:<端口>` 首屏响应约 **75 ms**。
+- 登录保护：同 IP 连续 5 次错误后返回 429；回环期内即使密码正确也被拒绝。
+- 备份恢复：恢复前自动生成 `pre-restore-*` 快照，服务重启后账号、题库、题目数量与恢复前一致。
+
+以上为真实执行结果，非估算。
 
 ## 权限模型（摘要）
 

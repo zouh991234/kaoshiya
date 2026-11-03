@@ -609,17 +609,6 @@ onMounted(async () => {
       </div>
     </section>
 
-    <Modal :open="templateNameOpen" title="另存为切题模板" :width="420" @close="templateNameOpen = false">
-      <label class="field">
-        <span class="field-label">模板名称</span>
-        <input v-model="templateName" class="input" type="text" placeholder="例如：XX 考试编号式" />
-      </label>
-      <template #footer>
-        <button class="btn" type="button" @click="templateNameOpen = false">取消</button>
-        <button class="btn btn-primary" type="button" @click="saveAsTemplate">保存</button>
-      </template>
-    </Modal>
-
     <!-- 4 校对 -->
     <section v-else-if="step === 3">
       <QualityPanel :report="report" :questions="questions" />
@@ -673,6 +662,17 @@ onMounted(async () => {
       </div>
       <p class="small faint">提交失败时已完成批次会被跳过，重试不会重复写入。</p>
     </section>
+    <Modal :open="templateNameOpen" title="另存为切题模板" :width="420" @close="templateNameOpen = false">
+      <label class="field">
+        <span class="field-label">模板名称</span>
+        <input v-model="templateName" class="input" type="text" placeholder="例如：XX 考试编号式" />
+      </label>
+      <template #footer>
+        <button class="btn" type="button" @click="templateNameOpen = false">取消</button>
+        <button class="btn btn-primary" type="button" @click="saveAsTemplate">保存</button>
+      </template>
+    </Modal>
+
   </AppShell>
 </template>
 

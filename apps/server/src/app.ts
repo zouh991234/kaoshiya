@@ -94,6 +94,21 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
 
   await app.register(cookie)
 
+  // 允许空 JSON 体（部分客户端会给无 body 的 DELETE/POST 也带上 content-type: application/json）
+  app.removeContentTypeParser('application/json')
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_request, body, done) => {
+    const text = typeof body === 'string' ? body.trim() : ''
+    if (!text) {
+      done(null, undefined)
+      return
+    }
+    try {
+      done(null, JSON.parse(text))
+    } catch {
+      done(new ApiError(400, 'INVALID_JSON', '请求体不是合法的 JSON'), undefined)
+    }
+  })
+
   // 图片以二进制直传（不引表单解析依赖），限制 2 MB
   app.addContentTypeParser(
     ['image/jpeg', 'image/png', 'image/webp'],
