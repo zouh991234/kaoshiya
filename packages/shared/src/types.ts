@@ -89,6 +89,7 @@ export interface Bank {
 
 export interface BankSummary extends Bank {
   questionCount: number
+  byType: Record<QuestionType, number>
   chapterCount: number
   seenCount: number
   rightCount: number

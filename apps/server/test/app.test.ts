@@ -384,3 +384,78 @@ describe('角色权限变更即时生效', () => {
     expect(denied.status).toBe(403)
   })
 })
+
+describe('进度同步与多角色并集', () => {
+  it('多角色权限取并集（editor + member = 能改题也能考试）', async () => {
+    const roles = await call('GET', '/api/roles', { cookie: ownerCookie })
+    const list = roles.json.items as { id: string; name: string }[]
+    const editorId = list.find((role) => role.name === 'editor')?.id
+    const memberId = list.find((role) => role.name === 'member')?.id
+    const created = await call('POST', '/api/users', {
+      cookie: ownerCookie,
+      body: { username: 'multi1', displayName: '多角色', roleIds: [String(editorId), String(memberId)] },
+    })
+    expect(created.status).toBe(201)
+    const initial = String((created.json as unknown as { initialPassword: string }).initialPassword)
+    const login = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      headers: { origin: ORIGIN, 'content-type': 'application/json' },
+      payload: JSON.stringify({ username: 'multi1', password: initial }),
+    })
+    const cookie = cookieOf(login as unknown as { headers: Record<string, unknown> })
+    const me = await call('GET', '/api/me', { cookie })
+    const perms = (me.json as { perms: string[] }).perms
+    expect(perms).toContain('question:update')
+    expect(perms).toContain('exam:take')
+    expect(perms).toContain('stats:self')
+    expect(perms).not.toContain('user:create')
+  })
+
+  it('两个账号的进度互不可见', async () => {
+    const list = await call('GET', `/api/banks/${bankId}/questions`, { cookie: ownerCookie })
+    const questionId = (list.json.items as { id: string }[])[0]?.id
+    const at = new Date(Date.now() + 1000).toISOString()
+    const ownerSync = await call('PUT', '/api/progress/batch', {
+      cookie: ownerCookie,
+      body: { ops: [{ questionId, result: 'right', favorite: true, note: '站长的笔记', at }] },
+    })
+    expect(ownerSync.status).toBe(200)
+
+    const memberView = await call('GET', `/api/progress?bankId=${bankId}`, { cookie: memberCookie })
+    const memberProgress = memberView.json.progress as Record<string, unknown>
+    expect(memberProgress[String(questionId)]).toBeUndefined()
+  })
+
+  it('重复提交同一批进度不重复计数（幂等）', async () => {
+    const list = await call('GET', `/api/banks/${bankId}/questions`, { cookie: memberCookie })
+    const questionId = (list.json.items as { id: string }[])[0]?.id
+    const at = new Date(Date.now() + 2000).toISOString()
+    const body = { ops: [{ questionId, result: 'wrong', at }] }
+    const first = await call('PUT', '/api/progress/batch', { cookie: memberCookie, body })
+    expect(first.status).toBe(200)
+    const after = (first.json.progress as Record<string, { wrong: number }>)[String(questionId)]
+    expect(after?.wrong).toBe(1)
+
+    const again = await call('PUT', '/api/progress/batch', { cookie: memberCookie, body })
+    const afterAgain = (again.json.progress as Record<string, { wrong: number }>)[String(questionId)]
+    expect(afterAgain?.wrong).toBe(1)
+    expect(again.json.skipped).toBe(1)
+  })
+
+  it('删除仍被用户占用的自定义角色被阻断并提示人数', async () => {
+    const created = await call('POST', '/api/roles', {
+      cookie: ownerCookie,
+      body: { name: '临时角色', description: '', perms: ['bank:read'] },
+    })
+    expect(created.status).toBe(201)
+    const roleId = String(created.json.id)
+    const users = await call('GET', '/api/users', { cookie: ownerCookie })
+    const member = (users.json.items as { id: string; username: string }[]).find((user) => user.username === 'member1')
+    await call('PUT', `/api/users/${member?.id}/roles`, { cookie: ownerCookie, body: { roleIds: [roleId] } })
+
+    const denied = await call('DELETE', `/api/roles/${roleId}`, { cookie: ownerCookie })
+    expect(denied.status).toBe(409)
+    expect(String(denied.json.message)).toContain('1 个用户')
+  })
+})

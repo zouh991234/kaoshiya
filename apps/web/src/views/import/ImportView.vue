@@ -19,6 +19,7 @@ import {
   type TemplateRule,
 } from '@kaoshiya/shared'
 import AppShell from '@/components/AppShell.vue'
+import Modal from '@/components/Modal.vue'
 import QualityPanel from './QualityPanel.vue'
 import Workbench from './Workbench.vue'
 import type { EditableQuestion, ImportDraft } from './types'
@@ -47,6 +48,9 @@ const rule = reactive<TemplateRule>({
   answer: BUILTIN_TEMPLATES[0]?.answer ?? '',
   explanation: BUILTIN_TEMPLATES[0]?.explanation ?? '',
 })
+const templateNameOpen = ref(false)
+const templateName = ref('')
+const CUSTOM_TEMPLATE_KEY = 'kaoshiya:split-templates'
 const answersSeparated = ref(false)
 const answerSource = ref('')
 const ruleError = ref('')
@@ -84,6 +88,49 @@ function syncRuleFromTemplate(): void {
   rule.answer = template.answer
   rule.explanation = template.explanation
   resplit()
+}
+
+function loadCustomTemplates(): void {
+  try {
+    const raw = localStorage.getItem(CUSTOM_TEMPLATE_KEY)
+    if (!raw) return
+    const list = JSON.parse(raw) as SplitTemplate[]
+    if (!Array.isArray(list)) return
+    const builtinIds = new Set(templates.value.map((item) => item.id))
+    const custom = list.filter((item) => item && item.id && !builtinIds.has(item.id))
+    templates.value = [...templates.value, ...custom.map((item) => ({ ...item, builtin: false }))]
+  } catch {
+    // 本地模板损坏时忽略，不影响导入
+  }
+}
+
+function saveAsTemplate(): void {
+  const name = templateName.value.trim()
+  if (!name) {
+    toast.error('请填写模板名称')
+    return
+  }
+  const template: SplitTemplate = {
+    id: `custom-${Date.now()}`,
+    name,
+    builtin: false,
+    description: '自定义模板（保存在当前浏览器）',
+    questionNo: rule.questionNo,
+    option: rule.option,
+    answer: rule.answer,
+    explanation: rule.explanation,
+  }
+  templates.value = [...templates.value, template]
+  templateId.value = template.id
+  try {
+    const custom = templates.value.filter((item) => !item.builtin)
+    localStorage.setItem(CUSTOM_TEMPLATE_KEY, JSON.stringify(custom))
+  } catch {
+    toast.error('当前浏览器不允许保存本地模板，仅本次有效')
+  }
+  templateNameOpen.value = false
+  templateName.value = ''
+  toast.ok(`已保存模板「${template.name}」`)
 }
 
 function uid(): string {
@@ -422,6 +469,7 @@ async function discardDraft(): Promise<void> {
 }
 
 onMounted(async () => {
+  loadCustomTemplates()
   const payload = await loadDraft<ImportDraft>(`import:${bankId.value}`)
   if (payload && payload.data.questions.length > 0) draftFound.value = payload.data
 })
@@ -527,6 +575,10 @@ onMounted(async () => {
         </label>
       </div>
       <p v-if="ruleError" class="field-error">{{ ruleError }}</p>
+      <div class="row">
+        <button class="btn btn-sm" type="button" @click="templateNameOpen = true">另存为模板</button>
+        <span class="small faint">自定义模板保存在当前浏览器，仅管理员本机可见</span>
+      </div>
 
       <label class="switch-row">
         <input v-model="answersSeparated" type="checkbox" />
@@ -556,6 +608,17 @@ onMounted(async () => {
         </button>
       </div>
     </section>
+
+    <Modal :open="templateNameOpen" title="另存为切题模板" :width="420" @close="templateNameOpen = false">
+      <label class="field">
+        <span class="field-label">模板名称</span>
+        <input v-model="templateName" class="input" type="text" placeholder="例如：XX 考试编号式" />
+      </label>
+      <template #footer>
+        <button class="btn" type="button" @click="templateNameOpen = false">取消</button>
+        <button class="btn btn-primary" type="button" @click="saveAsTemplate">保存</button>
+      </template>
+    </Modal>
 
     <!-- 4 校对 -->
     <section v-else-if="step === 3">

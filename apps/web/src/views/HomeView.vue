@@ -80,6 +80,18 @@ async function createBank(): Promise<void> {
   }
 }
 
+function typeSummary(bank: BankSummary): string {
+  const labels: { key: keyof BankSummary['byType']; label: string }[] = [
+    { key: 'single', label: '单' },
+    { key: 'multiple', label: '多' },
+    { key: 'judge', label: '判' },
+    { key: 'blank', label: '填' },
+    { key: 'essay', label: '主' },
+  ]
+  const parts = labels.filter((item) => (bank.byType?.[item.key] ?? 0) > 0).map((item) => `${item.label}${bank.byType[item.key]}`)
+  return parts.length ? parts.join(' ') : '—'
+}
+
 function fmtDate(value: string | null): string {
   if (!value) return '—'
   const date = new Date(value)
@@ -166,6 +178,7 @@ onMounted(load)
         <thead>
           <tr>
             <th>名称</th>
+            <th>题型</th>
             <th class="col-num">题数</th>
             <th class="col-num">进度</th>
             <th class="col-num">最近</th>
@@ -178,6 +191,7 @@ onMounted(load)
               <RouterLink :to="`/banks/${bank.id}`" class="name-link">{{ bank.name }}</RouterLink>
               <span class="small faint">{{ bank.subject }}</span>
             </td>
+            <td class="small muted">{{ typeSummary(bank) }}</td>
             <td class="col-num num">{{ bank.questionCount }}</td>
             <td class="col-num">
               <span class="mini-progress"><span :style="{ width: `${progressOf(bank)}%` }" /></span>

@@ -129,9 +129,21 @@ export function listBanks(
     favorite_count: number
     last_studied_at: string | null
   })[]
+  const typeRows = db
+    .prepare('SELECT bank_id, type, COUNT(*) AS c FROM questions GROUP BY bank_id, type')
+    .all() as { bank_id: string; type: string; c: number }[]
+  const typeMap = new Map<string, Record<string, number>>()
+  for (const row of typeRows) {
+    const entry = typeMap.get(row.bank_id) ?? {}
+    entry[row.type] = row.c
+    typeMap.set(row.bank_id, entry)
+  }
+  const emptyByType = { single: 0, multiple: 0, judge: 0, blank: 0, essay: 0 }
+
   return {
     items: rows.map((row) => ({
       ...toBank(row),
+      byType: { ...emptyByType, ...(typeMap.get(row.id) ?? {}) },
       questionCount: row.question_count,
       chapterCount: row.chapter_count,
       seenCount: row.seen_count,
